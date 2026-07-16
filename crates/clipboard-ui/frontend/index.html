@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Context Clipboard</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header>
+        <p class="eyebrow">Context Clipboard</p>
+        <h1>Tray popup shell</h1>
+        <p class="note">
+          Static phase-1 stub for the future Tauri webview. The Rust CLI owns IPC today.
+        </p>
+      </header>
+
+      <section class="toolbar" aria-label="Clipboard search controls">
+        <label class="search">
+          <span>Search</span>
+          <input type="search" placeholder="Find text, app, or window title" disabled>
+        </label>
+        <button type="button" disabled>Pause capture</button>
+      </section>
+
+      <section aria-labelledby="recent-heading">
+        <h2 id="recent-heading">Recent clips</h2>
+        <ol id="recent" class="clip-list"></ol>
+      </section>
+
+      <footer>
+        <p>
+          Production wiring will call Tauri commands backed by the same Unix socket IPC client.
+        </p>
+      </footer>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
