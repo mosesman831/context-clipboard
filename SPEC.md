@@ -536,4 +536,114 @@ This SPEC is the build contract when:
 2. Phases 0–4 define v1.0 scope exclusively.
 3. Success criteria in §8 are the acceptance tests for v1.0.
 
-**Next step:** implement Phase 0 (repo bootstrap) against this document.
+**Status:** Phase 0–2 skeleton exists (daemon + CLI). Continue against §16 polish and remaining §7 features.
+
+---
+
+## 16. v1 polish requirements (added after skeleton)
+
+Shipping client today is the **CLI** (`context-clipboard`) plus daemon. The Tauri tray remains required for v1.0 but is a later milestone within phases 3–4. Daemon RSS, FTS latency, burst drop, and categorization fixtures are enforceable now; UI RSS applies when the tray exists.
+
+### 16.1 First-run onboarding
+
+- Required screens (once; re-openable from settings): (1) what is captured, local + encrypted; (2) macOS Accessibility optional; (3) pause + hotkeys; (4) data location + clear/delete.
+- Canonical copy must say "no cloud, no accounts, no telemetry."
+- Do not capture until the user has acknowledged screen (1). Seed denylist before first capture.
+- CLI: `context-clipboard onboard` prints the same points until tray ships.
+
+### 16.2 Tray UI (milestone)
+
+- Tray states: active, paused (distinct), error/disconnected. Left-click popup; right-click menu (Pause/Resume, Open, Settings, Reveal data dir, Quit UI).
+- Popup: recent 5, search focused on open; ↑/↓, Enter paste, Delete, Esc. Rows: preview, category, source, relative time. Escaped text only.
+- Closing the popup must not stop the daemon.
+
+### 16.3 Paste behavior
+
+- Default: write to clipboard only. Auto-paste (synthesize Cmd/Ctrl+V) opt-in, default off.
+- macOS auto-paste needs Accessibility; otherwise clipboard-write + one-time hint.
+- Linux X11: XTEST; Wayland: clipboard-write only.
+- Optional "restore previous clipboard after paste" default off.
+
+### 16.4 Keychain migration from `db.key`
+
+- Startup key order: (1) OS keychain `latticeag.context-clipboard.db-key`; (2) legacy `db.key`; (3) generate new key.
+- If legacy file found and no keychain entry: import to keychain, rename file to `db.key.migrated`, INFO log without key bytes.
+- macOS Keychain Services; Linux Secret Service. Headless/no Secret Service: keep `0600` file + one WARN.
+- Existing keychain entry that cannot be read: fatal exit (never silently regenerate).
+
+### 16.5 Retention scheduler + vacuum
+
+- Run `evict` on startup and every 6h; also after every 200 inserts. Favorites exempt.
+- After eviction deletes ≥1 row: `PRAGMA wal_checkpoint(TRUNCATE)`.
+- `VACUUM` at most once per 24h when freelist >25%, or on user "Compact database".
+- Retention must not block IPC reads >50ms; batch deletes.
+
+### 16.6 Image / thumbnail pipeline
+
+- Decode → max edge 512 thumbnail → encrypt. Keep original only if ≤5 MiB.
+- Dedup by hash of normalized encoded bytes.
+- Skip undecodable / decompression-bomb-sized payloads. No OCR.
+
+### 16.7 Logging + redaction
+
+- ERROR / WARN / INFO / DEBUG; TRACE never in release.
+- Never log clip bodies, previews, decrypted text, URLs, window titles, or key bytes. Log category, byte_size, clip id, counts only.
+- Default `info` via `CONTEXT_CLIPBOARD_LOG`. Rotate under `<data_dir>/logs/` (5×5 MiB).
+- CI must fail if sample DEBUG logs contain known fixture secret strings.
+
+### 16.8 Autostart install/uninstall
+
+- `context-clipboardd autostart install|uninstall|status` manages **daemon** autostart.
+- macOS LaunchAgent `com.latticeag.context-clipboard.plist` (RunAtLoad + KeepAlive).
+- Linux XDG `~/.config/autostart/context-clipboard.desktop`.
+- Idempotent uninstall; does not delete history.
+
+### 16.9 Crash recovery / corrupt DB
+
+- On open: `PRAGMA integrity_check` (or `quick_check`). On failure: quarantine to `history.corrupt-<ts>.db` (+wal/+shm), open fresh DB, ERROR log with recovery notes.
+- Stale lock/socket reclaim on startup (already partially implemented).
+- Capture thread panic: restart with backoff; must not take down IPC.
+
+### 16.10 Capture-loop CPU budget
+
+- Idle capture ≤0.5% of one core p95 over 5 min when clipboard unchanged.
+- Short-circuit via platform change-count/serial before reading contents.
+
+### 16.11 Accessibility & i18n
+
+- v1 English (en-US) only; centralize user-facing strings.
+- Tray/popup keyboard-navigable + screen-reader labels when tray lands.
+- Respect reduced-motion / contrast. RTL/translations post-1.0.
+
+### 16.12 Release versioning & changelog
+
+- SemVer; Keep a Changelog `CHANGELOG.md`; tags `vX.Y.Z` with checksums.
+- Document IPC additive compatibility within a major.
+- Key migration deprecation: one minor release grace for `db.key.migrated`.
+
+### 16.13 Current shipping surface (honest)
+
+| Component | Status |
+|---|---|
+| Daemon + SQLite + FTS + encrypt | Shipping skeleton |
+| CLI IPC client | Shipping skeleton |
+| Tauri tray / hotkeys | Required for v1.0, not yet |
+| Keychain | Required; file key fallback until §16.4 |
+| Retention scheduler | Required; `evict` helper exists, must wire §16.5 |
+| Source enrichment | Required for denylist usefulness; X11/macOS enrichers TBD |
+| Image capture | Required for §7 checklist; text-only today |
+
+---
+
+## 17. Implementation priority (post-skeleton)
+
+1. Retention loop + corrupt DB recovery  
+2. KeyProvider + keychain migration  
+3. CLI UX polish (tables, colors, onboard)  
+4. Linux X11 source enrichment  
+5. Image capture + thumbnails  
+6. Autostart install/uninstall  
+7. Config reload (SIGHUP + UpdateSettings → live config)  
+8. Tauri tray milestone  
+9. Packaging scripts + CHANGELOG  
+10. Grow fixtures toward 500
