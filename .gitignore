@@ -1,0 +1,12 @@
+/target/
+**/target/
+node_modules/
+dist/
+.DS_Store
+*.db
+*.db-wal
+*.db-shm
+.idea/
+.vscode/
+crates/clipboard-ui/ui/dist/
+crates/clipboard-ui/src-tauri/target/

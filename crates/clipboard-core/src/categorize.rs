@@ -81,10 +81,10 @@ pub fn categorize(mime: &str, text: Option<&str>) -> Category {
         return Category::Text;
     }
 
-    if looks_like_file_urls(trimmed) {
+    if looks_like_file_urls(trimmed) || looks_like_absolute_paths(trimmed) {
         return Category::File;
     }
-    if is_single_http_url(trimmed) {
+    if is_single_url(trimmed) {
         return Category::Url;
     }
     if looks_like_code(trimmed) {
@@ -110,16 +110,44 @@ fn looks_like_file_urls(s: &str) -> bool {
     any
 }
 
-/// True if the whole string is a single http(s) URL (no interior whitespace,
-/// with a plausible host).
-fn is_single_http_url(s: &str) -> bool {
+/// Absolute filesystem paths (one or more newline/space-separated), no spaces
+/// inside individual path tokens.
+fn looks_like_absolute_paths(s: &str) -> bool {
+    let mut any = false;
+    for token in s.split_whitespace() {
+        if token.is_empty() {
+            continue;
+        }
+        let ok = (token.starts_with('/') || token.starts_with("~/"))
+            && !token.contains("://")
+            && token.contains('/')
+            && token
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || "/._-~+".contains(c));
+        if !ok {
+            return false;
+        }
+        any = true;
+    }
+    any
+}
+
+/// True if the whole string is a single URL (http(s), ftp, mailto).
+fn is_single_url(s: &str) -> bool {
     if s.chars().any(char::is_whitespace) {
         return false;
     }
     let lower = s.to_ascii_lowercase();
+
+    if let Some(addr) = lower.strip_prefix("mailto:") {
+        return !addr.is_empty() && addr.contains('@') && !addr.contains(' ');
+    }
+
     let rest = if let Some(r) = lower.strip_prefix("https://") {
         r
     } else if let Some(r) = lower.strip_prefix("http://") {
+        r
+    } else if let Some(r) = lower.strip_prefix("ftp://") {
         r
     } else {
         return false;
@@ -137,7 +165,9 @@ fn is_single_http_url(s: &str) -> bool {
     // Strip optional userinfo and port.
     let host = host.rsplit('@').next().unwrap_or(host);
     let host = host.split(':').next().unwrap_or(host);
-    host == "localhost" || host.contains('.')
+    host == "localhost"
+        || host.contains('.')
+        || host.chars().all(|c| c.is_ascii_digit() || c == '.')
 }
 
 fn looks_like_code(s: &str) -> bool {
@@ -146,6 +176,26 @@ fn looks_like_code(s: &str) -> bool {
     }
     if s.contains("```") {
         return true; // markdown fence
+    }
+
+    // PEM public keys / certificates are not "code" for our taxonomy.
+    if s.contains("BEGIN PUBLIC KEY")
+        || s.contains("BEGIN CERTIFICATE")
+        || s.contains("BEGIN RSA PUBLIC KEY")
+    {
+        return false;
+    }
+
+    // Tiny HTML fragments without script/style stay text.
+    let lower_full = s.to_ascii_lowercase();
+    if lower_full.starts_with('<')
+        && lower_full.ends_with('>')
+        && !lower_full.contains("<script")
+        && !lower_full.contains("function")
+        && s.len() < 200
+        && !s.contains('{')
+    {
+        return false;
     }
 
     const INDICATORS: &[&str] = &[
@@ -178,10 +228,39 @@ fn looks_like_code(s: &str) -> bool {
         "$(",
         "#define",
         "public static",
+        "select ",
+        " from ",
+        "apiversion:",
+        "kind:",
+        "while true",
+        "while (",
+        "for (",
+        "cargo ",
+        "git ",
+        "export ",
     ];
     let lower = s.to_ascii_lowercase();
     let hits = INDICATORS.iter().filter(|p| lower.contains(**p)).count();
     if hits >= 2 {
+        return true;
+    }
+
+    // Shell / VCS one-liners that are clearly commands.
+    if lower.starts_with("cargo ")
+        || lower.starts_with("git ")
+        || lower.starts_with("export ")
+        || lower.starts_with("npm ")
+        || lower.starts_with("pnpm ")
+    {
+        return true;
+    }
+    if lower.contains("select ") && lower.contains(" from ") {
+        return true;
+    }
+    if lower.contains("apiversion:") && lower.contains("kind:") {
+        return true;
+    }
+    if lower.contains("while true") {
         return true;
     }
 
@@ -290,8 +369,15 @@ mod tests {
         );
         // Missing host.
         assert_ne!(categorize("text/plain", Some("https://")), Category::Url);
-        // Non-http scheme.
-        assert_ne!(categorize("text/plain", Some("ftp://a.com")), Category::Url);
+        // ftp / mailto are URLs for our taxonomy.
+        assert_eq!(
+            categorize("text/plain", Some("ftp://files.example.org/a")),
+            Category::Url
+        );
+        assert_eq!(
+            categorize("text/plain", Some("mailto:security@latticeag.dev")),
+            Category::Url
+        );
     }
 
     #[test]
@@ -370,5 +456,24 @@ mod tests {
         let (correct, total) = load_fixtures_and_score(&path).expect("score");
         assert_eq!(total, 3);
         assert_eq!(correct, 3);
+    }
+}
+
+#[cfg(test)]
+mod golden_fixtures {
+    use super::*;
+    use std::path::PathBuf;
+
+    #[test]
+    fn golden_jsonl_meets_90_percent() {
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../fixtures/categorization/golden.jsonl");
+        let (correct, total) = load_fixtures_and_score(&path).expect("score fixtures");
+        assert!(total >= 80, "expected >=80 fixtures, got {total}");
+        let pct = (correct as f64) * 100.0 / (total as f64);
+        assert!(
+            pct >= 90.0,
+            "fixture accuracy {pct:.1}% ({correct}/{total}) below 90%"
+        );
     }
 }

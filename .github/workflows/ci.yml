@@ -29,13 +29,12 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: clippy
-        # Default members are clipboard-core + clipboard-daemon (no Tauri display).
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy --workspace --all-targets -- -D warnings
 
       - name: test
-        run: cargo test
+        run: cargo test --workspace
 
-      - name: Fixture inventory
+      - name: Fixture accuracy
         run: |
           set -euo pipefail
           lines=$(find fixtures/categorization -name '*.jsonl' -print0 | xargs -0 cat | wc -l)
@@ -44,4 +43,4 @@ jobs:
             echo "expected at least 80 categorization fixtures" >&2
             exit 1
           fi
-          # Scoring against clipboard-core lands with the categorizer; inventory only for now.
+          cargo test -p clipboard-core golden_jsonl_meets_90_percent -- --nocapture

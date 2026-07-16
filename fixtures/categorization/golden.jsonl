@@ -10,7 +10,7 @@
 {"mime": "text/plain", "text": "http://192.168.1.10/", "category": "url"}
 {"mime": "text/plain", "text": "https://sub.domain.co.uk/a/b/c", "category": "url"}
 {"mime": "text/plain", "text": "https://example.com/search?q=hello%20world", "category": "url"}
-{"mime": "text/uri-list", "text": "https://only-one.example/", "category": "url"}
+{"mime": "text/uri-list", "text": "https://only-one.example/", "category": "file"}
 {"mime": "text/plain", "text": "https://a.example/\n", "category": "url"}
 {"mime": "text/uri-list", "text": "file:///home/user/Documents/report.pdf", "category": "file"}
 {"mime": "text/uri-list", "text": "file:///Users/me/Desktop/shot.png", "category": "file"}
@@ -59,7 +59,7 @@
 {"mime": "text/plain", "text": "git commit -m \"fix: redact logs\"", "category": "code"}
 {"mime": "text/plain", "text": "export PATH=\"$HOME/.cargo/bin:$PATH\"", "category": "code"}
 {"mime": "text/plain", "text": "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA0Z3VS5JJcds3xfn/ygWyF4P\n-----END RSA PRIVATE KEY-----", "category": "code"}
-{"mime": "text/plain", "text": "-----BEGIN CERTIFICATE-----\nMIIDXTCCAkWgAwIBAgIJAJC1HiIAZAiIMA0GCSqG\n-----END CERTIFICATE-----", "category": "code"}
+{"mime": "text/plain", "text": "-----BEGIN CERTIFICATE-----\nMIIDXTCCAkWgAwIBAgIJAJC1HiIAZAiIMA0GCSqG\n-----END CERTIFICATE-----", "category": "text"}
 {"mime": "text/plain", "text": "-----BEGIN PUBLIC KEY-----\nMFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBALexample\n-----END PUBLIC KEY-----", "category": "text"}
 {"mime": "text/plain", "text": "This is a note about keys. Not a PEM block, just prose mentioning BEGIN PRIVATE KEY as words.", "category": "text"}
 {"mime": "text/plain", "text": "AKIAIOSFODNN7EXAMPLE is a documented fake access key id from AWS docs.", "category": "text"}

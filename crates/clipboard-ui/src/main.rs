@@ -1,7 +1,9 @@
 use anyhow::{anyhow, bail, Context, Result};
 use clap::{Parser, Subcommand};
+use clipboard_core::ipc::{ClipSummary, Request, Response};
 use clipboard_ui::client::{
-    default_socket_path, ClipSummary, IpcClient, Request, Response, DEFAULT_RECENT_LIMIT,
+    clip_text, default_socket_path, request_recent, request_search, source_label, IpcClient,
+    DEFAULT_RECENT_LIMIT,
 };
 use std::{
     io::{self, Write},
@@ -76,7 +78,10 @@ async fn main() -> Result<()> {
         .init();
 
     let cli = Cli::parse();
-    let socket = cli.socket.unwrap_or_else(default_socket_path);
+    let socket = match cli.socket {
+        Some(path) => path,
+        None => default_socket_path().context("resolving daemon socket path")?,
+    };
     let client = IpcClient::new(socket);
 
     match cli.command.unwrap_or(Command::Interactive) {
@@ -185,7 +190,7 @@ fn require_one<'a>(value: Option<&'a str>, usage: &str) -> Result<&'a str> {
 async fn run_command(client: &IpcClient, command: Command, json: bool) -> Result<()> {
     match command {
         Command::Status => {
-            let response = request_or_error(client, &Request::GetStatus {}).await?;
+            let response = request_or_error(client, &Request::GetStatus).await?;
             if json {
                 print_json(&response)?;
                 return Ok(());
@@ -193,7 +198,7 @@ async fn run_command(client: &IpcClient, command: Command, json: bool) -> Result
             print_status(response)
         }
         Command::Recent { limit } => {
-            let response = request_or_error(client, &Request::Recent { limit }).await?;
+            let response = request_or_error(client, &request_recent(limit)).await?;
             if json {
                 print_json(&response)?;
                 return Ok(());
@@ -207,7 +212,7 @@ async fn run_command(client: &IpcClient, command: Command, json: bool) -> Result
             app,
             since,
         } => {
-            let request = Request::search(query, limit, category, app, since);
+            let request = request_search(query, limit, category, app, since);
             let response = request_or_error(client, &request).await?;
             if json {
                 print_json(&response)?;
@@ -228,7 +233,7 @@ async fn run_command(client: &IpcClient, command: Command, json: bool) -> Result
             print_ack(response, json, "deleted")
         }
         Command::Clear => {
-            let response = request_or_error(client, &Request::Clear {}).await?;
+            let response = request_or_error(client, &Request::Clear).await?;
             print_ack(response, json, "cleared")
         }
         Command::Pause => {
@@ -272,14 +277,9 @@ fn print_status(response: Response) -> Result<()> {
         } => {
             println!("paused: {paused}");
             println!("clips: {count}");
-            if !version.is_empty() {
-                println!("daemon version: {version}");
-            }
+            println!("protocol version: {version}");
             if !platform_caps.is_empty() {
-                println!("platform caps:");
-                for (name, value) in platform_caps {
-                    println!("  {name}: {value}");
-                }
+                println!("platform caps: {}", platform_caps.join(", "));
             }
             Ok(())
         }
@@ -305,12 +305,7 @@ fn print_items(response: Response) -> Result<()> {
 }
 
 fn print_item(index: usize, item: &ClipSummary) {
-    let source = item.source_label().unwrap_or("unknown source");
-    let seen = item
-        .last_seen_at
-        .as_deref()
-        .or(item.created_at.as_deref())
-        .unwrap_or("unknown time");
+    let source = source_label(item).unwrap_or("unknown source");
     let category = if item.category.is_empty() {
         "uncategorized"
     } else {
@@ -322,19 +317,17 @@ fn print_item(index: usize, item: &ClipSummary) {
         item.preview.as_str()
     };
 
-    println!("{index}. {} [{}] {source} {seen}", item.id, category);
+    println!(
+        "{index}. {} [{}] {source} {}",
+        item.id, category, item.last_seen_at
+    );
     println!("   {preview}");
 }
 
 fn print_clip_text(response: Response) -> Result<()> {
     match response {
-        Response::ClipDetail {
-            text,
-            content,
-            preview,
-            ..
-        } => {
-            let body = text.or(content).or(preview).unwrap_or_default();
+        Response::ClipDetail { detail } => {
+            let body = clip_text(&detail).unwrap_or("");
             print!("{body}");
             io::stdout().flush().context("flush clip text")?;
             Ok(())
@@ -350,8 +343,8 @@ fn print_ack(response: Response, json: bool, fallback: &str) -> Result<()> {
     }
 
     match response {
-        Response::Ok { message } => {
-            println!("{}", message.unwrap_or_else(|| fallback.to_owned()));
+        Response::Ok => {
+            println!("{fallback}");
             Ok(())
         }
         Response::Status { .. } => print_status(response),

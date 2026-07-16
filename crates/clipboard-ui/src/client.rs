@@ -1,21 +1,30 @@
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use serde_json::Value;
+//! IPC client for `context-clipboardd` using `clipboard_core` wire types.
+
 use std::{
-    collections::BTreeMap,
     env,
     error::Error,
     fmt,
     path::{Path, PathBuf},
 };
+
+use clipboard_core::ipc::{
+    ClipDetail, ClipSummary, Request, Response, IPC_VERSION, MAX_FRAME_BYTES,
+};
+use clipboard_core::paths;
+use serde::Serialize;
 use tokio::{
-    io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt},
+    io::{AsyncReadExt, AsyncWriteExt},
     net::UnixStream,
 };
 
-pub const PROTOCOL_VERSION: u32 = 1;
+// Re-export wire types for the binary and downstream callers.
+pub use clipboard_core::ipc::{
+    ClipDetail as Detail, ClipSummary as Summary, Request as IpcRequest, Response as IpcResponse,
+};
+
+pub const PROTOCOL_VERSION: u32 = IPC_VERSION;
 pub const DEFAULT_RECENT_LIMIT: u32 = 5;
 
-const MAX_FRAME_BYTES: usize = 16 * 1024 * 1024;
 const SOCKET_ENV: &str = "CONTEXT_CLIPBOARD_SOCKET";
 
 #[derive(Debug)]
@@ -23,6 +32,7 @@ pub enum ClientError {
     Io(std::io::Error),
     Json(serde_json::Error),
     Protocol(String),
+    Paths(String),
 }
 
 impl fmt::Display for ClientError {
@@ -30,7 +40,7 @@ impl fmt::Display for ClientError {
         match self {
             Self::Io(error) => write!(f, "{error}"),
             Self::Json(error) => write!(f, "{error}"),
-            Self::Protocol(message) => write!(f, "{message}"),
+            Self::Protocol(message) | Self::Paths(message) => write!(f, "{message}"),
         }
     }
 }
@@ -40,7 +50,7 @@ impl Error for ClientError {
         match self {
             Self::Io(error) => Some(error),
             Self::Json(error) => Some(error),
-            Self::Protocol(_) => None,
+            Self::Protocol(_) | Self::Paths(_) => None,
         }
     }
 }
@@ -59,142 +69,6 @@ impl From<serde_json::Error> for ClientError {
 
 pub type Result<T> = std::result::Result<T, ClientError>;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "PascalCase")]
-pub enum Request {
-    Ping {
-        v: u32,
-    },
-    Search {
-        query: String,
-        limit: u32,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        category: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        app: Option<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        since: Option<String>,
-    },
-    Recent {
-        limit: u32,
-    },
-    Get {
-        id: String,
-    },
-    Delete {
-        id: String,
-    },
-    Clear {},
-    SetPaused {
-        paused: bool,
-    },
-    GetStatus {},
-}
-
-impl Request {
-    pub fn ping() -> Self {
-        Self::Ping {
-            v: PROTOCOL_VERSION,
-        }
-    }
-
-    pub fn search(
-        query: impl Into<String>,
-        limit: u32,
-        category: Option<String>,
-        app: Option<String>,
-        since: Option<String>,
-    ) -> Self {
-        Self::Search {
-            query: query.into(),
-            limit,
-            category,
-            app,
-            since,
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "PascalCase")]
-pub enum Response {
-    Ok {
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        message: Option<String>,
-    },
-    Err {
-        code: String,
-        message: String,
-    },
-    Status {
-        #[serde(default)]
-        paused: bool,
-        #[serde(default)]
-        count: u64,
-        #[serde(default)]
-        version: String,
-        #[serde(default)]
-        platform_caps: BTreeMap<String, Value>,
-    },
-    SearchResults {
-        #[serde(default)]
-        items: Vec<ClipSummary>,
-    },
-    ClipDetail {
-        id: String,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        text: Option<String>,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        content: Option<String>,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        preview: Option<String>,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        mime: Option<String>,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        category: Option<String>,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        source_app: Option<String>,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        source_window_title: Option<String>,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        created_at: Option<String>,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        last_seen_at: Option<String>,
-    },
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ClipSummary {
-    pub id: String,
-    #[serde(default)]
-    pub preview: String,
-    #[serde(default)]
-    pub category: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub app: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub source_app: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub source_window_title: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub source_url: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub created_at: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub last_seen_at: Option<String>,
-    #[serde(flatten)]
-    pub extra: BTreeMap<String, Value>,
-}
-
-impl ClipSummary {
-    pub fn source_label(&self) -> Option<&str> {
-        self.source_app
-            .as_deref()
-            .or(self.app.as_deref())
-            .or(self.source_window_title.as_deref())
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct IpcClient {
     socket_path: PathBuf,
@@ -207,8 +81,8 @@ impl IpcClient {
         }
     }
 
-    pub fn for_default_socket() -> Self {
-        Self::new(default_socket_path())
+    pub fn for_default_socket() -> Result<Self> {
+        Ok(Self::new(default_socket_path()?))
     }
 
     pub fn socket_path(&self) -> &Path {
@@ -225,26 +99,15 @@ impl IpcClient {
     }
 }
 
-pub fn default_socket_path() -> PathBuf {
+/// Resolve the daemon socket the same way the daemon does (with env override).
+pub fn default_socket_path() -> Result<PathBuf> {
     if let Some(path) = env::var_os(SOCKET_ENV) {
-        return PathBuf::from(path);
+        return Ok(PathBuf::from(path));
     }
-
-    if let Some(runtime_dir) = env::var_os("XDG_RUNTIME_DIR") {
-        return PathBuf::from(runtime_dir)
-            .join("context-clipboard")
-            .join("context-clipboard.sock");
-    }
-
-    let user = env::var("UID").unwrap_or_else(|_| "user".to_owned());
-    env::temp_dir().join(format!("context-clipboard-{user}.sock"))
+    paths::socket_path().map_err(|e| ClientError::Paths(e.to_string()))
 }
 
-pub async fn write_frame<W, T>(writer: &mut W, value: &T) -> Result<()>
-where
-    W: AsyncWrite + Unpin,
-    T: Serialize,
-{
+pub async fn write_frame(stream: &mut UnixStream, value: &impl Serialize) -> Result<()> {
     let payload = serde_json::to_vec(value)?;
     if payload.len() > MAX_FRAME_BYTES {
         return Err(ClientError::Protocol(format!(
@@ -252,32 +115,25 @@ where
             payload.len()
         )));
     }
-
-    writer
+    stream
         .write_all(&(payload.len() as u32).to_be_bytes())
         .await?;
-    writer.write_all(&payload).await?;
-    writer.flush().await?;
+    stream.write_all(&payload).await?;
+    stream.flush().await?;
     Ok(())
 }
 
-pub async fn read_frame<R, T>(reader: &mut R) -> Result<T>
-where
-    R: AsyncRead + Unpin,
-    T: DeserializeOwned,
-{
+pub async fn read_frame(stream: &mut UnixStream) -> Result<Response> {
     let mut len = [0_u8; 4];
-    reader.read_exact(&mut len).await?;
+    stream.read_exact(&mut len).await?;
     let len = u32::from_be_bytes(len) as usize;
-
     if len > MAX_FRAME_BYTES {
         return Err(ClientError::Protocol(format!(
             "frame is {len} bytes, max is {MAX_FRAME_BYTES}"
         )));
     }
-
     let mut payload = vec![0_u8; len];
-    reader.read_exact(&mut payload).await?;
+    stream.read_exact(&mut payload).await?;
     Ok(serde_json::from_slice(&payload)?)
 }
 
@@ -288,13 +144,50 @@ fn connect_error(error: std::io::Error, socket_path: &Path) -> ClientError {
     ))
 }
 
+/// Helpers for building common requests.
+pub fn request_ping() -> Request {
+    Request::Ping {
+        v: PROTOCOL_VERSION,
+    }
+}
+
+pub fn request_search(
+    query: impl Into<String>,
+    limit: u32,
+    category: Option<String>,
+    app: Option<String>,
+    since: Option<String>,
+) -> Request {
+    Request::Search {
+        query: query.into(),
+        limit: Some(limit),
+        category,
+        app,
+        since,
+    }
+}
+
+pub fn request_recent(limit: u32) -> Request {
+    Request::Recent { limit: Some(limit) }
+}
+
+pub fn source_label(item: &ClipSummary) -> Option<&str> {
+    item.source_app
+        .as_deref()
+        .or(item.source_window_title.as_deref())
+}
+
+pub fn clip_text(detail: &ClipDetail) -> Option<&str> {
+    detail.text.as_deref()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn encodes_search_request_for_daemon() {
-        let request = Request::search(
+        let request = request_search(
             "meeting notes",
             10,
             Some("text".to_owned()),
@@ -302,9 +195,9 @@ mod tests {
             Some("2026-07-01T00:00:00Z".to_owned()),
         );
 
-        let encoded = serde_json::to_value(request).expect("search request encodes");
+        let encoded = serde_json::to_value(&request).expect("search request encodes");
 
-        assert_eq!(encoded["type"], "Search");
+        assert_eq!(encoded["op"], "search");
         assert_eq!(encoded["query"], "meeting notes");
         assert_eq!(encoded["limit"], 10);
         assert_eq!(encoded["category"], "text");
@@ -312,21 +205,10 @@ mod tests {
         assert_eq!(encoded["since"], "2026-07-01T00:00:00Z");
     }
 
-    #[tokio::test]
-    async fn round_trips_length_prefixed_request() {
-        let (mut writer, mut reader) = tokio::io::duplex(1024);
-        let request = Request::Recent {
-            limit: DEFAULT_RECENT_LIMIT,
-        };
-        let expected = request.clone();
-
-        let write_task = tokio::spawn(async move { write_frame(&mut writer, &request).await });
-        let decoded: Request = read_frame(&mut reader).await.expect("frame decodes");
-
-        assert_eq!(decoded, expected);
-        write_task
-            .await
-            .expect("writer task completes")
-            .expect("write ok");
+    #[test]
+    fn encodes_ping_with_snake_case_op() {
+        let encoded = serde_json::to_value(request_ping()).expect("ping encodes");
+        assert_eq!(encoded["op"], "ping");
+        assert_eq!(encoded["v"], PROTOCOL_VERSION);
     }
 }

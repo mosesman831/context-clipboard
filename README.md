@@ -2,62 +2,72 @@
 
 Local-first clipboard manager that stores what you copied and where it came from (app, window title, time). History stays on your machine, encrypted at rest. No accounts, no cloud sync, no telemetry.
 
-**Status:** early development. Behavior and scope are defined in [SPEC.md](./SPEC.md). Expect incomplete builds and breaking changes until v1.
+**Status:** early development (phases 0–2 in progress). Contract: [SPEC.md](./SPEC.md).
 
 ## Architecture
 
-Always-on Rust daemon (`context-clipboardd`) captures and stores history; an on-demand Tauri tray UI talks to it over local IPC.
+Always-on Rust daemon (`context-clipboardd`) captures and indexes history in SQLite (FTS5, AES-GCM). The `context-clipboard` CLI talks to it over a Unix socket. A Tauri tray popup is planned; the UI crate currently ships the IPC client + CLI.
+
+```
+context-clipboardd  →  SQLite (encrypted) + FTS5
+        ↑ Unix socket IPC
+context-clipboard   (status | recent | search | …)
+```
 
 ## Platform support
 
 | Platform | Support |
 |---|---|
-| macOS | First-class |
+| macOS | First-class (signing/notarization still TODO) |
 | Linux X11 | First-class |
 | Linux Wayland | Best-effort |
 | Windows | Not supported |
 
 ## Build
 
-Prerequisites:
-
-- Rust 1.83+
-- On Linux, X11 capture deps will be documented as watchers land (arboard / x11 stack). SQLite is bundled via rusqlite.
+Prerequisites: Rust stable (1.83+ intended; CI uses current stable).
 
 ```bash
-cargo build -p clipboard-daemon
-cargo build -p clipboard-core
+cargo build --workspace
+cargo test --workspace
 ```
 
-The tray UI crate (`clipboard-ui`) is a stub until Tauri wiring lands. Workspace default members are core + daemon so headless CI does not need a display.
+Binaries:
+
+- `context-clipboardd` — daemon
+- `context-clipboard` — CLI / IPC client
 
 ## Quick start
 
-Once the daemon CLI is wired:
-
 ```bash
-context-clipboardd
-context-clipboard status
-context-clipboard recent
-context-clipboard search "query"
+# terminal 1
+cargo run -p clipboard-daemon -- --data-dir /tmp/cc-demo
+
+# terminal 2 (same machine; socket under XDG_RUNTIME_DIR or data-dir)
+cargo run -p clipboard-ui --bin context-clipboard -- --socket /tmp/cc-demo/context-clipboardd.sock status
+cargo run -p clipboard-ui --bin context-clipboard -- --socket /tmp/cc-demo/context-clipboardd.sock recent
+cargo run -p clipboard-ui --bin context-clipboard -- --socket /tmp/cc-demo/context-clipboardd.sock search "query"
 ```
+
+Copy text in another app while the daemon runs; it polls the clipboard, encrypts, categorizes, and indexes. Pause with `pause` / resume with `resume`.
 
 ## Competitors
 
-Other clipboard tools already do history and search well. CopyQ is open and scriptable. Alfred and Raycast fold history into a launcher. Pastebot is a polished macOS app. System clipboard history exists on macOS and Windows.
+CopyQ is open and scriptable. Alfred and Raycast fold history into a launcher. Pastebot is a polished macOS app. System clipboard history exists on macOS and Windows.
 
-Context Clipboard is aiming at local-only defaults, encrypted storage, per-app exclusions and retention, and source metadata as a first-class field, with an explicit threat model in [SECURITY.md](./SECURITY.md).
+This project aims at local-only defaults, encrypted storage, per-app exclusions and retention, and source metadata as a first-class field. Threat model: [SECURITY.md](./SECURITY.md).
 
 ## Privacy
 
-- Local-only by default. No telemetry.
-- Encryption at rest with an OS keychain-backed key (v1).
-- Secret heuristics, app denylist, pause capture, and retention limits (see SPEC §5).
-- Logs must never include clipboard contents.
+- Local-only. No telemetry.
+- Encryption at rest (dev key file today; OS keychain planned per SPEC).
+- Secret heuristics, app denylist, pause capture, retention limits.
+- Logs never include clipboard contents.
 
 ## Docs
 
 - [SPEC.md](./SPEC.md) — product contract
-- [SECURITY.md](./SECURITY.md) — threat model and disclosure
+- [PLAN.md](./PLAN.md) — locked readiness decisions
+- [SECURITY.md](./SECURITY.md)
 - [CONTRIBUTING.md](./CONTRIBUTING.md)
 - [LICENSE](./LICENSE) — Apache-2.0
