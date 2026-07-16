@@ -1,5 +1,7 @@
 # context-clipboard
 
+> **Status:** vision draft. Production / OSS readiness plan lives in [`PLAN.md`](./PLAN.md). Do not implement against this file until the plan decisions are locked and this SPEC is rewritten.
+
 > **LatticeAG · Desktop** · Context-aware clipboard manager
 
 A desktop app that enriches every clipboard item with source context (app, project, URL, time), indexes everything locally with semantic search, and auto-categorizes into code/URL/text/image.
