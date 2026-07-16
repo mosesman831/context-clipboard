@@ -58,6 +58,20 @@ impl AppState {
             .unwrap_or(1_048_576)
     }
 
+    pub fn max_image_bytes(&self) -> usize {
+        self.config
+            .read()
+            .map(|c| c.capture.max_image_bytes as usize)
+            .unwrap_or(5_242_880)
+    }
+
+    pub fn thumbnail_max_edge(&self) -> u32 {
+        self.config
+            .read()
+            .map(|c| c.capture.thumbnail_max_edge)
+            .unwrap_or(512)
+    }
+
     pub fn recent_count(&self) -> u32 {
         self.config.read().map(|c| c.ui.recent_count).unwrap_or(5)
     }

@@ -4,11 +4,13 @@
 //! On a change it hashes, categorizes, applies pause + secret heuristics +
 //! app denylist, encrypts, and dedups/inserts through the store layer.
 //!
-//! Source app / window enrichment is not wired here yet (returns `None`); see
-//! the platform-enricher TODOs in the crate report. Image + file-list payloads
-//! beyond text are also future work.
+//! When text is empty or unavailable, falls through to image capture
+//! ([`crate::image_capture`]). Source app / window enrichment is not wired
+//! here yet (returns `None`); see the platform-enricher TODOs in the crate
+//! report. File-list payloads beyond text are still future work.
 
 use crate::db::{self, CapturedClip};
+use crate::image_capture;
 use crate::state::AppState;
 use clipboard_core::categorize::{categorize, Category};
 use clipboard_core::schema::content_hash;
@@ -52,8 +54,14 @@ fn run(state: Arc<AppState>, shutdown: Arc<AtomicBool>) {
                         warn!(error = %e, "failed to store clip");
                     }
                 }
-                Ok(_) => {}
-                Err(arboard::Error::ContentNotAvailable) => {}
+                Ok(_) | Err(arboard::Error::ContentNotAvailable) => {
+                    // IMAGE: call image_capture::try_store_image(...)
+                    if let Err(e) =
+                        image_capture::try_store_image(&state, &mut clipboard, &mut last_hash)
+                    {
+                        warn!(error = %e, "failed to store image clip");
+                    }
+                }
                 Err(e) => debug!(error = %e, "clipboard read error"),
             }
         }

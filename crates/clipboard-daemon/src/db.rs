@@ -27,6 +27,23 @@ pub struct CapturedClip {
     pub byte_size: i64,
 }
 
+/// A newly captured image clip. Thumbnail bytes are encrypted at rest; full
+/// raster is not stored in the DB (hash + dims + encrypted thumb only).
+pub struct CapturedImage {
+    pub content_hash: String,
+    pub mime: String,
+    pub preview: String,
+    pub thumb_bytes: Vec<u8>,
+    pub thumb_mime: String,
+    pub width: i64,
+    pub height: i64,
+    pub source_app: Option<String>,
+    pub source_bundle_id: Option<String>,
+    pub source_window_title: Option<String>,
+    pub source_url: Option<String>,
+    pub byte_size: i64,
+}
+
 fn summary_from_row(row: &ClipRow) -> ClipSummary {
     ClipSummary {
         id: row.id.clone(),
@@ -188,6 +205,49 @@ pub fn store_capture(conn: &Connection, key: &Key, clip: CapturedClip) -> Result
             &id,
             FtsFields {
                 text: searchable,
+                source_app: row.source_app.as_deref(),
+                source_window_title: row.source_window_title.as_deref(),
+                source_url: row.source_url.as_deref(),
+            },
+        )?;
+    }
+    Ok(is_new)
+}
+
+/// Insert an image clip (encrypting the thumbnail) or dedup by content hash.
+/// Returns true if a new row was stored.
+pub fn store_image(conn: &Connection, key: &Key, image: CapturedImage) -> Result<bool> {
+    let is_new = cs::get_clip_by_hash(conn, &image.content_hash)?.is_none();
+
+    let mut row = ClipRow::new(
+        image.content_hash,
+        image.mime,
+        "image".to_string(),
+        image.byte_size,
+    );
+    row.preview_plaintext = Some(image.preview);
+    row.source_app = image.source_app;
+    row.source_bundle_id = image.source_bundle_id;
+    row.source_window_title = image.source_window_title;
+    row.source_url = image.source_url;
+    row.width = Some(image.width);
+    row.height = Some(image.height);
+    row.thumb_mime = Some(image.thumb_mime);
+
+    let (nonce, ciphertext) = crypto::encrypt(key, &image.thumb_bytes)
+        .map_err(|e| anyhow::anyhow!("encrypt image thumb: {e}"))?;
+    row.thumb_ciphertext = Some(ciphertext);
+    row.thumb_nonce = Some(nonce);
+
+    let id = cs::insert_or_touch(conn, &row)?;
+
+    if is_new {
+        // Index the preview string so "[image WxH]" is searchable.
+        cs::fts_add(
+            conn,
+            &id,
+            FtsFields {
+                text: row.preview_plaintext.as_deref(),
                 source_app: row.source_app.as_deref(),
                 source_window_title: row.source_window_title.as_deref(),
                 source_url: row.source_url.as_deref(),

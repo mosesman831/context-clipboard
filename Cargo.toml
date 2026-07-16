@@ -39,3 +39,5 @@ clap = { version = "4", features = ["derive"] }
 tempfile = "3"
 arboard = "3"
 libc = "0.2"
+x11rb = "0.13"
+image = "0.25"

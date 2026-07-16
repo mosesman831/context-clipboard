@@ -8,6 +8,7 @@ pub mod capture;
 pub mod db;
 pub mod frame;
 pub mod handlers;
+pub mod image_capture;
 pub mod lock;
 pub mod paths;
 pub mod server;

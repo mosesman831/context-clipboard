@@ -11,7 +11,7 @@ use sha2::{Digest, Sha256};
 use crate::error::{Error, Result};
 
 /// Current schema version applied by [`migrate`].
-pub const SCHEMA_VERSION: i64 = 1;
+pub const SCHEMA_VERSION: i64 = 2;
 
 /// v1 schema DDL (SPEC §4). The `PRAGMA` lines from the spec are applied by
 /// [`open`] rather than embedded here, so this batch can run inside a
@@ -162,6 +162,22 @@ pub fn migrate(conn: &Connection) -> Result<()> {
         tx.commit()?;
     }
 
+    if current < 2 {
+        let tx = conn.unchecked_transaction()?;
+        tx.execute_batch(
+            "ALTER TABLE clips ADD COLUMN thumb_ciphertext BLOB;
+             ALTER TABLE clips ADD COLUMN thumb_nonce BLOB;
+             ALTER TABLE clips ADD COLUMN thumb_mime TEXT;
+             ALTER TABLE clips ADD COLUMN width INTEGER;
+             ALTER TABLE clips ADD COLUMN height INTEGER;",
+        )?;
+        tx.execute(
+            "INSERT INTO schema_migrations(version, applied_at) VALUES (2, ?1)",
+            params![now_rfc3339()],
+        )?;
+        tx.commit()?;
+    }
+
     Ok(())
 }
 
@@ -203,6 +219,12 @@ pub struct ClipRow {
     pub last_seen_at: String,
     pub updated_at: String,
     pub is_favorite: bool,
+    /// Encrypted thumbnail bytes (images only; v2+).
+    pub thumb_ciphertext: Option<Vec<u8>>,
+    pub thumb_nonce: Option<Vec<u8>>,
+    pub thumb_mime: Option<String>,
+    pub width: Option<i64>,
+    pub height: Option<i64>,
 }
 
 impl ClipRow {
@@ -226,6 +248,11 @@ impl ClipRow {
             last_seen_at: now.clone(),
             updated_at: now,
             is_favorite: false,
+            thumb_ciphertext: None,
+            thumb_nonce: None,
+            thumb_mime: None,
+            width: None,
+            height: None,
         }
     }
 }
@@ -248,12 +275,18 @@ fn row_from_sqlite(r: &rusqlite::Row<'_>) -> rusqlite::Result<ClipRow> {
         last_seen_at: r.get("last_seen_at")?,
         updated_at: r.get("updated_at")?,
         is_favorite: r.get("is_favorite")?,
+        thumb_ciphertext: r.get("thumb_ciphertext")?,
+        thumb_nonce: r.get("thumb_nonce")?,
+        thumb_mime: r.get("thumb_mime")?,
+        width: r.get("width")?,
+        height: r.get("height")?,
     })
 }
 
 const CLIP_COLUMNS: &str = "id, content_hash, mime, category, text_ciphertext, text_nonce, \
      preview_plaintext, source_app, source_bundle_id, source_window_title, source_url, \
-     byte_size, created_at, last_seen_at, updated_at, is_favorite";
+     byte_size, created_at, last_seen_at, updated_at, is_favorite, \
+     thumb_ciphertext, thumb_nonce, thumb_mime, width, height";
 
 /// Insert a clip row.
 pub fn insert_clip(conn: &Connection, row: &ClipRow) -> Result<()> {
@@ -261,9 +294,11 @@ pub fn insert_clip(conn: &Connection, row: &ClipRow) -> Result<()> {
         "INSERT INTO clips (
             id, content_hash, mime, category, text_ciphertext, text_nonce,
             preview_plaintext, source_app, source_bundle_id, source_window_title,
-            source_url, byte_size, created_at, last_seen_at, updated_at, is_favorite
+            source_url, byte_size, created_at, last_seen_at, updated_at, is_favorite,
+            thumb_ciphertext, thumb_nonce, thumb_mime, width, height
          ) VALUES (
-            ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16
+            ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16,
+            ?17, ?18, ?19, ?20, ?21
          )",
         params![
             row.id,
@@ -282,6 +317,11 @@ pub fn insert_clip(conn: &Connection, row: &ClipRow) -> Result<()> {
             row.last_seen_at,
             row.updated_at,
             row.is_favorite,
+            row.thumb_ciphertext,
+            row.thumb_nonce,
+            row.thumb_mime,
+            row.width,
+            row.height,
         ],
     )?;
     Ok(())
@@ -802,5 +842,45 @@ mod tests {
         assert_eq!(n, 3);
         assert_eq!(count_clips(&c).expect("count"), 0);
         assert!(fts_search(&c, "clearme", 10).expect("search").is_empty());
+    }
+
+    #[test]
+    fn migrate_applies_image_thumb_columns() {
+        let c = conn();
+        let cols: Vec<String> = c
+            .prepare("PRAGMA table_info(clips)")
+            .expect("pragma")
+            .query_map([], |r| r.get::<_, String>(1))
+            .expect("map")
+            .collect::<std::result::Result<_, _>>()
+            .expect("cols");
+        for name in [
+            "thumb_ciphertext",
+            "thumb_nonce",
+            "thumb_mime",
+            "width",
+            "height",
+        ] {
+            assert!(cols.iter().any(|c| c == name), "missing column {name}");
+        }
+
+        let mut row = ClipRow::new(
+            content_hash(b"rgba-bytes"),
+            "image/png".into(),
+            "image".into(),
+            16,
+        );
+        row.preview_plaintext = Some("[image 2x2]".into());
+        row.thumb_ciphertext = Some(vec![1, 2, 3]);
+        row.thumb_nonce = Some(vec![0; 12]);
+        row.thumb_mime = Some("image/jpeg".into());
+        row.width = Some(2);
+        row.height = Some(2);
+        insert_clip(&c, &row).expect("insert image");
+        let fetched = get_clip(&c, &row.id).expect("get").expect("some");
+        assert_eq!(fetched.width, Some(2));
+        assert_eq!(fetched.height, Some(2));
+        assert_eq!(fetched.thumb_mime.as_deref(), Some("image/jpeg"));
+        assert_eq!(fetched.thumb_ciphertext.as_deref(), Some(&[1, 2, 3][..]));
     }
 }

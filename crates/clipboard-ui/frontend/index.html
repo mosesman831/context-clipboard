@@ -4,35 +4,35 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Context Clipboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./styles.css">
   </head>
   <body>
-    <main class="shell">
-      <header>
-        <p class="eyebrow">Context Clipboard</p>
-        <h1>Tray popup shell</h1>
-        <p class="note">
-          Static phase-1 stub for the future Tauri webview. The Rust CLI owns IPC today.
-        </p>
+    <main class="popup" role="dialog" aria-label="Context Clipboard">
+      <header class="popup-brand">
+        <h1 class="brand">Context Clipboard</h1>
+        <p class="tagline">Recent clips, ready to paste.</p>
       </header>
 
-      <section class="toolbar" aria-label="Clipboard search controls">
-        <label class="search">
-          <span>Search</span>
-          <input type="search" placeholder="Find text, app, or window title" disabled>
-        </label>
-        <button type="button" disabled>Pause capture</button>
-      </section>
+      <form class="search-bar" role="search" aria-label="Search clips" onsubmit="return false;">
+        <label class="sr-only" for="q">Search</label>
+        <input id="q" type="search" placeholder="Search text, app, or window…" autocomplete="off">
+        <button type="button" class="btn-pause" id="pause" aria-pressed="false">Pause</button>
+      </form>
 
-      <section aria-labelledby="recent-heading">
-        <h2 id="recent-heading">Recent clips</h2>
+      <section class="recent" aria-labelledby="recent-heading">
+        <div class="recent-head">
+          <h2 id="recent-heading">Recent</h2>
+          <span class="hint" id="result-count"></span>
+        </div>
         <ol id="recent" class="clip-list"></ol>
       </section>
 
-      <footer>
-        <p>
-          Production wiring will call Tauri commands backed by the same Unix socket IPC client.
-        </p>
+      <footer class="popup-foot">
+        <span>⌘⇧.</span>
+        <span class="muted">Open anytime</span>
       </footer>
     </main>
 
