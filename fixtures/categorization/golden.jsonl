@@ -1,0 +1,101 @@
+{"mime": "text/plain", "text": "https://example.com", "category": "url"}
+{"mime": "text/plain", "text": "http://localhost:3000/api/v1/health", "category": "url"}
+{"mime": "text/plain", "text": "https://docs.rust-lang.org/book/", "category": "url"}
+{"mime": "text/plain", "text": "https://github.com/mosesman831/context-clipboard", "category": "url"}
+{"mime": "text/plain", "text": "https://en.wikipedia.org/wiki/Clipboard_(computing)", "category": "url"}
+{"mime": "text/plain", "text": "ftp://files.example.org/pub/readme.txt", "category": "url"}
+{"mime": "text/plain", "text": "mailto:security@latticeag.dev", "category": "url"}
+{"mime": "text/plain", "text": "https://user:pass@example.com/path?q=1#frag", "category": "url"}
+{"mime": "text/plain", "text": "https://cdn.example.com/assets/app.js?v=2", "category": "url"}
+{"mime": "text/plain", "text": "http://192.168.1.10/", "category": "url"}
+{"mime": "text/plain", "text": "https://sub.domain.co.uk/a/b/c", "category": "url"}
+{"mime": "text/plain", "text": "https://example.com/search?q=hello%20world", "category": "url"}
+{"mime": "text/uri-list", "text": "https://only-one.example/", "category": "url"}
+{"mime": "text/plain", "text": "https://a.example/\n", "category": "url"}
+{"mime": "text/uri-list", "text": "file:///home/user/Documents/report.pdf", "category": "file"}
+{"mime": "text/uri-list", "text": "file:///Users/me/Desktop/shot.png", "category": "file"}
+{"mime": "text/uri-list", "text": "file:///tmp/out.log\nfile:///tmp/err.log", "category": "file"}
+{"mime": "text/uri-list", "text": "file:///var/log/syslog", "category": "file"}
+{"mime": "text/uri-list", "text": "file:///mnt/data/dataset.csv", "category": "file"}
+{"mime": "text/uri-list", "text": "file://localhost/home/user/notes.md", "category": "file"}
+{"mime": "text/uri-list", "text": "file:///a\nfile:///b\nfile:///c", "category": "file"}
+{"mime": "text/plain", "text": "file:///home/user/only-path.txt", "category": "file"}
+{"mime": "text/uri-list", "text": "file:///opt/app/bin/run\nfile:///opt/app/config.toml", "category": "file"}
+{"mime": "text/plain", "text": "/home/ubuntu/projects/context-clipboard/SPEC.md", "category": "file"}
+{"mime": "text/plain", "text": "/tmp/a.txt\n/tmp/b.txt\n/tmp/c.txt", "category": "file"}
+{"mime": "text/uri-list", "text": "file:///media/usb/backup.tar.gz", "category": "file"}
+{"mime": "image/png", "text": "", "category": "image"}
+{"mime": "image/jpeg", "text": "", "category": "image"}
+{"mime": "image/webp", "text": "", "category": "image"}
+{"mime": "image/gif", "text": "", "category": "image"}
+{"mime": "image/png", "text": "", "category": "image"}
+{"mime": "image/jpeg", "text": "", "category": "image"}
+{"mime": "image/png", "text": "", "category": "image"}
+{"mime": "image/bmp", "text": "", "category": "image"}
+{"mime": "image/tiff", "text": "", "category": "image"}
+{"mime": "text/plain", "text": "#!/usr/bin/env bash\nset -euo pipefail\necho hi", "category": "code"}
+{"mime": "text/plain", "text": "#!/bin/sh\necho hello", "category": "code"}
+{"mime": "text/plain", "text": "#!/usr/bin/env python3\nprint('hi')", "category": "code"}
+{"mime": "text/plain", "text": "#!/usr/bin/env node\nconsole.log(1)", "category": "code"}
+{"mime": "text/plain", "text": "#!/usr/bin/env ruby\nputs 'hi'", "category": "code"}
+{"mime": "text/plain", "text": "```rust\nfn main() {}\n```", "category": "code"}
+{"mime": "text/plain", "text": "```python\ndef f(x):\n    return x + 1\n```", "category": "code"}
+{"mime": "text/plain", "text": "```\nSELECT * FROM clips;\n```", "category": "code"}
+{"mime": "text/plain", "text": "Here is a snippet:\n```js\nconst x = 1;\n```\n", "category": "code"}
+{"mime": "text/plain", "text": "```typescript\ntype Id = string;\n```", "category": "code"}
+{"mime": "text/plain", "text": "fn main() {\n    println!(\"hello\");\n}", "category": "code"}
+{"mime": "text/plain", "text": "def greet(name: str) -> str:\n    return f\"hi {name}\"\n", "category": "code"}
+{"mime": "text/plain", "text": "package main\n\nimport \"fmt\"\n\nfunc main() {\n\tfmt.Println(\"hi\")\n}", "category": "code"}
+{"mime": "text/plain", "text": "public class App {\n  public static void main(String[] args) {}\n}", "category": "code"}
+{"mime": "text/plain", "text": "const map = new Map();\nmap.set('a', 1);\nconsole.log(map.get('a'));", "category": "code"}
+{"mime": "text/plain", "text": "use serde::{Deserialize, Serialize};\n\n#[derive(Debug)]\nstruct Clip;", "category": "code"}
+{"mime": "text/plain", "text": "SELECT id, category FROM clips WHERE category = 'code' LIMIT 10;", "category": "code"}
+{"mime": "text/plain", "text": "if (x != null && y > 0) { return x + y; }", "category": "code"}
+{"mime": "text/plain", "text": "#!/usr/bin/env perl\nprint \"hi\\n\";", "category": "code"}
+{"mime": "text/plain", "text": "diff --git a/foo.rs b/foo.rs\n@@ -1,3 +1,4 @@\n+use std::io;", "category": "code"}
+{"mime": "text/plain", "text": "{\n  \"name\": \"context-clipboard\",\n  \"private\": true\n}", "category": "code"}
+{"mime": "text/plain", "text": "---\napiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: demo\n", "category": "code"}
+{"mime": "text/plain", "text": "cargo test -p clipboard-core -- --nocapture", "category": "code"}
+{"mime": "text/plain", "text": "git commit -m \"fix: redact logs\"", "category": "code"}
+{"mime": "text/plain", "text": "export PATH=\"$HOME/.cargo/bin:$PATH\"", "category": "code"}
+{"mime": "text/plain", "text": "-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA0Z3VS5JJcds3xfn/ygWyF4P\n-----END RSA PRIVATE KEY-----", "category": "code"}
+{"mime": "text/plain", "text": "-----BEGIN CERTIFICATE-----\nMIIDXTCCAkWgAwIBAgIJAJC1HiIAZAiIMA0GCSqG\n-----END CERTIFICATE-----", "category": "code"}
+{"mime": "text/plain", "text": "-----BEGIN PUBLIC KEY-----\nMFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBALexample\n-----END PUBLIC KEY-----", "category": "text"}
+{"mime": "text/plain", "text": "This is a note about keys. Not a PEM block, just prose mentioning BEGIN PRIVATE KEY as words.", "category": "text"}
+{"mime": "text/plain", "text": "AKIAIOSFODNN7EXAMPLE is a documented fake access key id from AWS docs.", "category": "text"}
+{"mime": "text/plain", "text": "Remember to buy milk on the way home.", "category": "text"}
+{"mime": "text/plain", "text": "The meeting moved to Thursday afternoon.", "category": "text"}
+{"mime": "text/plain", "text": "Thanks for the review. I addressed the comments.", "category": "text"}
+{"mime": "text/plain", "text": "Local-first means the history never leaves this machine by default.", "category": "text"}
+{"mime": "text/plain", "text": "Please pause capture before pasting a one-time password.", "category": "text"}
+{"mime": "text/plain", "text": "Window titles help when you forget which app you copied from.", "category": "text"}
+{"mime": "text/plain", "text": "Retention defaults to thirty days unless you change settings.", "category": "text"}
+{"mime": "text/plain", "text": "Favorites are exempt from age-based eviction.", "category": "text"}
+{"mime": "text/plain", "text": "This sentence has no URLs, fences, or shebangs.", "category": "text"}
+{"mime": "text/plain", "text": "Hello, world of ordinary clipboard text.", "category": "text"}
+{"mime": "text/plain", "text": "A short shopping list: eggs, bread, butter.", "category": "text"}
+{"mime": "text/plain", "text": "Call me when you land.", "category": "text"}
+{"mime": "text/plain", "text": "The rain in Spain falls mainly on the plain.", "category": "text"}
+{"mime": "text/plain", "text": "Draft subject line for the release notes email.", "category": "text"}
+{"mime": "text/plain", "text": "I liked the earlier revision better than this one.", "category": "text"}
+{"mime": "text/plain", "text": "Notes from standup: ship the daemon stub first.", "category": "text"}
+{"mime": "text/plain", "text": "Bookmarked for later reading on the train.", "category": "text"}
+{"mime": "text/plain", "text": "Plain English beats jargon in the README.", "category": "text"}
+{"mime": "text/plain", "text": "No symbols dense enough to look like source code.", "category": "text"}
+{"mime": "text/plain", "text": "Just a phone number for the plumber: 555-0100.", "category": "text"}
+{"mime": "text/plain", "text": "Chapter one\n\nIt was a quiet morning. Nothing looked like code.", "category": "text"}
+{"mime": "text/plain", "text": "Agenda:\n1. Status\n2. Risks\n3. Next steps", "category": "text"}
+{"mime": "text/plain", "text": "Quote: \"Ship the privacy defaults before the pretty UI.\"", "category": "text"}
+{"mime": "text/plain", "text": " ", "category": "text"}
+{"mime": "text/plain", "text": "a", "category": "text"}
+{"mime": "text/plain", "text": "https://crates.io/crates/rusqlite", "category": "url"}
+{"mime": "text/plain", "text": "https://tauri.app/", "category": "url"}
+{"mime": "text/plain", "text": "https://www.apache.org/licenses/LICENSE-2.0", "category": "url"}
+{"mime": "text/plain", "text": "https://contributor-covenant.org/version/2/1/code_of_conduct/", "category": "url"}
+{"mime": "text/plain", "text": "http://example.org:8080/healthz", "category": "url"}
+{"mime": "text/plain", "text": "```bash\n#!/usr/bin/env bash\ncargo fmt\n```", "category": "code"}
+{"mime": "text/plain", "text": "impl Clip {\n    pub fn id(&self) -> &str { &self.id }\n}", "category": "code"}
+{"mime": "text/plain", "text": "while True:\n    break", "category": "code"}
+{"mime": "text/plain", "text": "template <typename T>\nT identity(T x) { return x; }", "category": "code"}
+{"mime": "text/html", "text": "<p>Hello</p>", "category": "text"}
+{"mime": "text/html", "text": "<script>alert(1)</script>", "category": "code"}

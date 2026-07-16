@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+
+jobs:
+  linux:
+    name: Linux (fmt, clippy, test)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        # Workspace crates may pull deps that need newer-than-1.83 toolchains (e.g. clap).
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: rustfmt
+        run: cargo fmt --all -- --check
+
+      - name: clippy
+        # Default members are clipboard-core + clipboard-daemon (no Tauri display).
+        run: cargo clippy --all-targets -- -D warnings
+
+      - name: test
+        run: cargo test
+
+      - name: Fixture inventory
+        run: |
+          set -euo pipefail
+          lines=$(find fixtures/categorization -name '*.jsonl' -print0 | xargs -0 cat | wc -l)
+          echo "categorization fixture lines: ${lines}"
+          if [ "${lines}" -lt 80 ]; then
+            echo "expected at least 80 categorization fixtures" >&2
+            exit 1
+          fi
+          # Scoring against clipboard-core lands with the categorizer; inventory only for now.
