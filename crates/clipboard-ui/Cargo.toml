@@ -1,0 +1,20 @@
+[package]
+name = "clipboard-ui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Context Clipboard Tauri tray UI"
+
+[dependencies]
+clipboard-core = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+tokio = { workspace = true }
+clap = { workspace = true }
+
+[[bin]]
+name = "context-clipboard"
+path = "src/main.rs"

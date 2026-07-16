@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Context Clipboard (WIP)",
+  "version": "0.0.0",
+  "description": "Phase 2 stub. Chrome Native Messaging for source URL enrichment. Not included in v1.",
+  "minimum_chrome_version": "116",
+  "permissions": [],
+  "host_permissions": [],
+  "action": {
+    "default_title": "Context Clipboard (not ready)"
+  }
+}

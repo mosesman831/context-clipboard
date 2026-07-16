@@ -1,0 +1,98 @@
+:root {
+  color-scheme: dark;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #111318;
+  color: #f4f7fb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at top left, rgba(109, 91, 255, 0.18), transparent 28rem),
+    #111318;
+}
+
+.shell {
+  width: min(42rem, calc(100vw - 2rem));
+  padding: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1.25rem;
+  background: rgba(23, 26, 34, 0.92);
+  box-shadow: 0 2rem 5rem rgba(0, 0, 0, 0.32);
+}
+
+.eyebrow,
+.note,
+footer {
+  color: #9ca7ba;
+}
+
+.eyebrow {
+  margin: 0 0 0.35rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.75rem;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+.toolbar {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+}
+
+.search {
+  display: grid;
+  gap: 0.35rem;
+}
+
+input,
+button {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 0.75rem;
+  background: #0f1117;
+  color: inherit;
+  padding: 0.8rem 0.9rem;
+  font: inherit;
+}
+
+button {
+  align-self: end;
+}
+
+.clip-list {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+
+.clip {
+  padding: 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.clip strong {
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.clip small {
+  color: #9ca7ba;
+}

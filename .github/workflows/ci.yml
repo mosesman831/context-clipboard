@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+
+jobs:
+  linux:
+    name: Linux (fmt, clippy, test)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        # Workspace crates may pull deps that need newer-than-1.83 toolchains (e.g. clap).
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: rustfmt
+        run: cargo fmt --all -- --check
+
+      - name: clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: test
+        run: cargo test --workspace
+
+      - name: Fixture accuracy
+        run: |
+          set -euo pipefail
+          lines=$(find fixtures/categorization -name '*.jsonl' -print0 | xargs -0 cat | wc -l)
+          echo "categorization fixture lines: ${lines}"
+          if [ "${lines}" -lt 80 ]; then
+            echo "expected at least 80 categorization fixtures" >&2
+            exit 1
+          fi
+          cargo test -p clipboard-core golden_jsonl_meets_90_percent -- --nocapture

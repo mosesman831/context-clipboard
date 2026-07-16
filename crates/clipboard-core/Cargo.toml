@@ -1,0 +1,24 @@
+[package]
+name = "clipboard-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Shared schema, crypto, categorization, and IPC types for Context Clipboard"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+uuid = { workspace = true }
+rusqlite = { workspace = true }
+aes-gcm = { workspace = true }
+rand = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+directories = { workspace = true }
+chrono = { workspace = true }
+toml = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
